@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Map Demo</title>
+     
+    <link rel="stylesheet" href="css/jquery.mobile-1.4.3.css" />
+	
+    <script type="text/javascript" src="js/jquery-2.1.1.js"></script>
+    <script type="text/javascript" src="js/jquery.mobile-1.4.3.js"></script>
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <script type="text/javascript" src="js/cordova-1.5.0.js"></script>
+     
+<script type="text/javascript">
+
+var map;
+var marker;
+var infowindow;
+var watchID;
+ 
+$(document).ready(function(){
+    document.addEventListener("deviceready", load_map, false);
+    //uncomment for testing in Chrome browser
+    //load_map();
+});
+
+function load_map(){
+    google.load("maps", "3.17", {"callback": onDeviceReady, other_params: "sensor=true&language=en"});
+}
+ 
+//PhoneGap is ready function
+function onDeviceReady() {
+	$(window).on("pagecontainershow", function( event, ui ) {
+		//init map when map page show
+		if($(":mobile-pagecontainer").pagecontainer("getActivePage").attr('id') == 'map_page'){
+			max_height();
+			show_map();
+		}
+	});
+	$(window).on("orientationchange resize", function( event, ui ) {
+		if($(":mobile-pagecontainer").pagecontainer("getActivePage").attr('id') == 'map_page'){
+			max_height();
+		}
+	});
+}
+ 
+function max_height(){
+	var d = $(document).height();
+	var t = $('#map_page div[data-role="header"]').outerHeight(true) + $('#map_page div[data-role="footer"]').outerHeight(true);
+	var w = $(window).height();
+	if(d > w){
+		$('#map').height(w-t);
+	}else{
+		$('#map').height(d-t);
+	}
+}
+         
+function show_map(){
+
+    if(!map){
+        var latlng = new google.maps.LatLng(55.17, 23.76);
+        var myOptions = {
+            zoom: 6,
+            center: latlng,
+            streetViewControl: true,
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            zoomControl: true
+        };
+        map = new google.maps.Map(document.getElementById("map"), myOptions);
+         
+        google.maps.event.addListenerOnce(map, 'tilesloaded', function(){
+            //watch for geoposition change
+            watchID = navigator.geolocation.watchPosition(geo_success, geo_error, { maximumAge: 5000, timeout: 5000, enableHighAccuracy: true });  
+        });
+         
+        $("#map_zoom_in").click(function(){
+            map.setZoom(map.getZoom() + 1);
+            return false;
+        });
+         
+        $("#map_zoom_out").click(function(){
+            map.setZoom(map.getZoom() - 1);
+            return false;
+        });
+    }else{
+		var center = map.getCenter();
+		google.maps.event.trigger(map, "resize");
+    	map.setCenter(center);
+    }
+}
+ 
+function geo_error(error){
+    //alert error for debug
+    //alert('code: ' + error.code + '\n' + 'message: ' + error.message + '\n');
+}
+ 
+function geo_success(position) {
+     
+    map.setCenter(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
+    map.setZoom(15);
+ 
+    var info =
+    ('Latitude: '         + position.coords.latitude          + '<br>' +
+    'Longitude: '         + position.coords.longitude         + '<br>' +
+    'Altitude: '          + position.coords.altitude          + '<br>' +
+    'Accuracy: '          + position.coords.accuracy          + '<br>' +
+    'Altitude Accuracy: ' + position.coords.altitudeAccuracy  + '<br>' +
+    'Heading: '           + position.coords.heading           + '<br>' +
+    'Speed: '             + position.coords.speed             + '<br>' +
+    'Timestamp: '         + new Date(position.timestamp));
+ 
+    var point = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+    if(!marker){
+        //create marker
+        marker = new google.maps.Marker({
+            position: point,
+            map: map
+        });
+    }else{
+        //move marker to new position
+        marker.setPosition(point);
+    }
+    if(!infowindow){
+        infowindow = new google.maps.InfoWindow({
+            content: info
+        });
+    }else{
+        infowindow.setContent(info);
+    }
+    google.maps.event.addListener(marker, 'click', function() {
+      infowindow.open(map,marker);
+    });
+}
+
+</script>
+ 
+</head>
+<body>
+ 
+<div data-role="page" id="index">
+    <div data-role="header" data-position="fixed">
+		<h1>Page Header</h1>
+	</div>
+    <div role="main" class="ui-content">
+        <a href="#map_page" class="ui-btn ui-btn-inline">Map</a>
+		<a href="#test" class="ui-btn ui-btn-inline">Test</a>
+    </div>
+    <div data-role="footer" data-position="fixed">
+		<h4>Page Footer</h4>
+	</div>
+</div>
+ 
+<div data-role="page" id="map_page">
+    <div data-role="header" data-add-back-btn="true" data-back-btn-text="Go back" data-position="fixed">
+        <h1>Map Header</h1>
+    </div>
+    <div role="main" class="ui-content" style="padding:0;margin:0;">
+        <div id="map"></div>
+    </div>
+    <div data-role="footer" data-position="fixed">
+		<div data-role="controlgroup" data-type="horizontal">
+			<a id="map_zoom_in" href="#" class="ui-btn ui-icon-plus ui-btn-icon-notext ui-corner-all">Zoom In</a>
+			<a id="map_zoom_out" href="#" class="ui-btn ui-icon-minus ui-btn-icon-notext ui-corner-all">Zoom Out</a>
+		</div>
+    </div>
+</div>
+	
+<div data-role="page" id="test">
+    <div data-role="header" data-add-back-btn="true" data-back-btn-text="Back" data-position="fixed">
+        <h1>Header</h1>
+    </div>
+    <div role="main" class="ui-content">
+        Test page
+    </div>
+</div>
+ 
+</html>
